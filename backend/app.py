@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import warnings
 
 from flask import Flask, jsonify
@@ -41,7 +42,12 @@ def create_app() -> Flask:
     app.register_blueprint(assignment_bp, url_prefix="/api/assignments")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
-    startup = {"db_ready": True, "ml_ready": True}
+    ml_startup_disabled = os.getenv("DISABLE_ML_STARTUP", "1" if os.getenv("VERCEL") == "1" else "0") == "1"
+    startup = {
+        "db_ready": True,
+        "ml_ready": True,
+        "ml_startup_disabled": ml_startup_disabled,
+    }
 
     try:
         initialize_database()
@@ -50,16 +56,18 @@ def create_app() -> Flask:
         app.logger.exception("DB init failed: %s", exc)
 
     # Load ML model at startup when available, but do not fail app boot on serverless.
-    try:
-        load_model()
-    except Exception as exc:
-        startup["ml_ready"] = False
-        app.logger.exception("ML init failed: %s", exc)
+    if not ml_startup_disabled:
+        try:
+            load_model()
+        except Exception as exc:
+            startup["ml_ready"] = False
+            app.logger.exception("ML init failed: %s", exc)
 
     @app.get("/api/health")
     def health():
         status = "ok" if startup["db_ready"] and startup["ml_ready"] else "degraded"
-        return jsonify({"status": status, **startup})
+        commit = (os.getenv("VERCEL_GIT_COMMIT_SHA") or "local")[:7]
+        return jsonify({"status": status, "commit": commit, **startup})
 
     return app
 

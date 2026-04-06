@@ -1,0 +1,51 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.vercel/
+frontend/coverage/
+
+# Python
+backend/__pycache__/
+backend/**/*.py[cod]
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.venv/
+backend/venv/
+backend/env/
+backend/build/
+backend/dist/
+backend/.python-version
+
+# ML generated artifacts
+backend/ml/**/*.pkl
+backend/ml/**/.ipynb_checkpoints/
+backend/ml/**/__pycache__/
+
+# Vercel
+.vercel/
+backend/.vercel/
+frontend/.vercel/
+
+# Editor folders
+.vscode/
+.idea/
+*.swp
+*~

@@ -1,0 +1,10 @@
+{
+  "name": "smart-volunteer-system",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "server": "cd backend && python app.py"
+  }
+}
+

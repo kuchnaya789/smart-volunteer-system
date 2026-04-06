@@ -1,0 +1,32 @@
+{
+  "accuracy": 0.9975,
+  "precision": 1.0,
+  "recall": 0.975,
+  "f1_score": 0.9873417721518988,
+  "roc_auc": 1.0,
+  "confusion_matrix": [
+    [
+      360,
+      0
+    ],
+    [
+      1,
+      39
+    ]
+  ],
+  "positive_rate": 0.101,
+  "train_size": 1600,
+  "test_size": 400,
+  "feature_columns": [
+    "skill_match_ratio",
+    "willingness_score",
+    "availability_hours",
+    "distance_score",
+    "fairness_score",
+    "urgency_score",
+    "time_compatibility",
+    "volunteer_reliability",
+    "task_difficulty",
+    "ngo_reputation"
+  ]
+}

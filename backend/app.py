@@ -41,13 +41,25 @@ def create_app() -> Flask:
     app.register_blueprint(assignment_bp, url_prefix="/api/assignments")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
+    startup = {"db_ready": True, "ml_ready": True}
+
+    try:
+        initialize_database()
+    except Exception as exc:
+        startup["db_ready"] = False
+        app.logger.exception("DB init failed: %s", exc)
+
+    # Load ML model at startup when available, but do not fail app boot on serverless.
+    try:
+        load_model()
+    except Exception as exc:
+        startup["ml_ready"] = False
+        app.logger.exception("ML init failed: %s", exc)
+
     @app.get("/api/health")
     def health():
-        return jsonify({"status": "ok"})
-
-    initialize_database()
-    # Load ML model at startup
-    load_model()
+        status = "ok" if startup["db_ready"] and startup["ml_ready"] else "degraded"
+        return jsonify({"status": status, **startup})
 
     return app
 

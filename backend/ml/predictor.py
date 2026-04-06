@@ -8,12 +8,6 @@ import joblib
 import numpy as np
 import pandas as pd
 
-try:
-    # When running as package
-    from ml.train_model import train_and_save
-except ModuleNotFoundError:  # pragma: no cover - fallback for direct execution
-    from train_model import train_and_save
-
 _model = None
 _feature_columns: List[str] = []
 
@@ -37,12 +31,13 @@ def _load_advanced_or_basic_model() -> None:
         _feature_columns = joblib.load(str(advanced_features))
         return
 
-    # Fallback: use basic 4-feature model
+    # Fallback: use basic 4-feature model when available.
     basic_model = base_dir / "random_forest.pkl"
-    if not basic_model.exists():
-        train_and_save(str(basic_model))
-    _model = joblib.load(str(basic_model))
     _feature_columns = ["skill_match", "availability", "distance_norm", "workload_norm"]
+    if basic_model.exists():
+        _model = joblib.load(str(basic_model))
+    else:
+        _model = None
 
 
 def load_model() -> None:
@@ -109,6 +104,30 @@ def _vector_from_sequence(seq: Sequence[float]) -> List[float]:
     return vec
 
 
+def _heuristic_probability(features: Any) -> float:
+    """
+    Safe fallback for serverless environments when model artifacts are unavailable.
+    """
+    if isinstance(features, dict):
+        skill = float(features.get("skill_match_ratio", features.get("skill_match", 0.0)) or 0.0)
+        avail = float(features.get("willingness_score", features.get("availability", 0.0)) or 0.0)
+        dist_score = float(
+            features.get("distance_score", 1.0 - float(features.get("distance_norm", 1.0) or 1.0)) or 0.0
+        )
+        reliability = float(features.get("reliability_score", 0.5) or 0.5)
+    else:
+        seq = list(features) if isinstance(features, (list, tuple, np.ndarray)) else [0.0, 0.0, 1.0, 0.5]
+        skill = float(seq[0]) if len(seq) > 0 else 0.0
+        avail = float(seq[1]) if len(seq) > 1 else 0.0
+        dist_score = 1.0 - (float(seq[2]) if len(seq) > 2 else 1.0)
+        reliability = 1.0 - (float(seq[3]) if len(seq) > 3 else 0.5)
+
+    prob = 0.45 * skill + 0.25 * avail + 0.2 * max(0.0, min(1.0, dist_score)) + 0.1 * max(
+        0.0, min(1.0, reliability)
+    )
+    return max(0.0, min(1.0, prob))
+
+
 def predict_success(features: Any) -> float:
     """
     predict_success(features) -> float probability 0-1
@@ -124,6 +143,9 @@ def predict_success(features: Any) -> float:
         vec = _vector_from_sequence(features)
     else:
         raise TypeError("features must be dict or sequence of numbers")
+
+    if _model is None:
+        return _heuristic_probability(features)
 
     if hasattr(_model, "n_features_in_") and int(_model.n_features_in_) != len(vec):
         raise ValueError(
